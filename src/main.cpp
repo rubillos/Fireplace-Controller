@@ -6,6 +6,7 @@
 #include "Adafruit_MCP9808.h"
 
 // #define SIMULATE_HEAT
+#define FLAT_BOARD_LAYOUT
 
 #ifdef DO_SERIAL
 #define Debug_print(...)    Serial.print(__VA_ARGS__)
@@ -31,10 +32,19 @@
 
 #define MOTOR_PIN_1 11
 #define MOTOR_PIN_2 12
-#define MOTOR_SLEEP_PIN 7
 
+#ifdef FLAT_BOARD_LAYOUT
+#define MOTOR_SLEEP_PIN 13
+#define KNOB_LIMIT_SENSOR_PIN MISO
+#define FIRE_REQUEST_PIN A4
+#define SWITCH_GROUND_PIN_1 2
+#define SWITCH_GROUND_PIN_2 A3
+#define TEMP_SENSOR_POWER_PIN 7
+#else
+#define MOTOR_SLEEP_PIN 7
 #define KNOB_LIMIT_SENSOR_PIN 9
 #define FIRE_REQUEST_PIN 10
+#endif
 
 #define DOTSTAR_CLOCK_PIN 40
 #define DOTSTAR_DATA_PIN 41
@@ -217,6 +227,16 @@ void setup() {
     pinMode(MOTOR_SLEEP_PIN, OUTPUT);
     motorStop();
 
+    #ifdef FLAT_BOARD_LAYOUT
+    pinMode(SWITCH_GROUND_PIN_1, OUTPUT);
+    digitalWrite(SWITCH_GROUND_PIN_1, LOW);
+    pinMode(SWITCH_GROUND_PIN_2, OUTPUT);
+    digitalWrite(SWITCH_GROUND_PIN_2, LOW);
+    pinMode(TEMP_SENSOR_POWER_PIN, OUTPUT);
+    digitalWrite(TEMP_SENSOR_POWER_PIN, HIGH);
+    delay(200);
+    #endif
+
     pinMode(KNOB_LIMIT_SENSOR_PIN, INPUT_PULLUP);
     pinMode(FIRE_REQUEST_PIN, INPUT_PULLUP);
 
@@ -270,10 +290,8 @@ void loop() {
     fireOnTime = 0;
   }
 
-  float temp = tempSensor.readTempC() * 1.8 + 32.0;
-
   if (wantsHeat && validSensor) {
-    // float temp = tempSensor.readTempC() * 1.8 + 32.0;
+    float temp = tempSensor.readTempC() * 1.8 + 32.0;
 
     if (temp > TEMP_LIMIT) {
       wantsHeat = false;
@@ -296,9 +314,6 @@ void loop() {
 
     // Debug_print(statusCount++);
     // Debug_println(": Loop");
-    Debug_print("Temp=");
-    Debug_print(temp);
-    Debug_println("°F");
   }
 
   delay(10);
