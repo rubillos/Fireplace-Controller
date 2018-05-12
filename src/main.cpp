@@ -49,12 +49,11 @@
 #define DOTSTAR_CLOCK_PIN 40
 #define DOTSTAR_DATA_PIN 41
 
-#define LED_PIN 13
-
 #define COLOR_RED 0xFF0000
 #define COLOR_GREEN 0x00FF00
 #define COLOR_BLUE 0x0000FF
 #define COLOR_YELLOW 0xFFFF00
+#define COLOR_ORANGE 0xFF8000
 #define COLOR_PURPLE 0xA020F0
 #define COLOR_CYAN 0x00FFFF
 #define COLOR_BLACK 0x000000
@@ -63,6 +62,7 @@ Adafruit_DotStar statusLED = Adafruit_DotStar(1, DOTSTAR_DATA_PIN, DOTSTAR_CLOCK
 
 Adafruit_MCP9808 tempSensor = Adafruit_MCP9808();
 bool validSensor = false;
+bool overTemp = false;
 
 typedef enum {
   valveClosed = 0,
@@ -70,7 +70,8 @@ typedef enum {
   valveFinishOpening,
   valveOpen,
   valveClosing,
-  valveFinishClosing
+  valveFinishClosing,
+  valveUnknown
 } ValveState;
 
 ValveState currentValveState = valveClosed;
@@ -116,7 +117,11 @@ public:
 elapsedMillis64 fireOnTime;
 
 void setStatusColor(uint32_t color) {
-  color = (color & 0xF0F0F0) >> 4;
+  #ifdef FLAT_BOARD_LAYOUT
+  color = (color & 0xFCFCFC) >> 2;    // reduce color to 1/4
+  #else
+  color = (color & 0xF0F0F0) >> 4;    // reduce coloor to 1/16
+  #endif
 
   statusLED.setPixelColor(0, color);
   statusLED.show();
@@ -161,12 +166,13 @@ void motorStop() {
 
 void updateStatusLED() {
   switch (currentValveState) {
-    case valveClosed: setStatusColor(COLOR_GREEN);   break;
+    case valveClosed: setStatusColor((overTemp) ? COLOR_CYAN : COLOR_GREEN);   break;
     case valveFinishOpening:
     case valveOpening: setStatusColor(COLOR_YELLOW);   break;
-    case valveOpen: setStatusColor(COLOR_RED);   break;
+    case valveOpen: setStatusColor(COLOR_ORANGE);   break;
     case valveFinishClosing:
     case valveClosing: setStatusColor(COLOR_YELLOW);   break;
+    case valveUnknown: setStatusColor(COLOR_RED);   break;
   }
 }
 
@@ -290,11 +296,14 @@ void loop() {
     fireOnTime = 0;
   }
 
+  overTemp = false;
+
   if (wantsHeat && validSensor) {
     float temp = tempSensor.readTempC() * 1.8 + 32.0;
 
     if (temp > TEMP_LIMIT) {
       wantsHeat = false;
+      overTemp = true;
     }
   }
 
@@ -313,7 +322,9 @@ void loop() {
     statusTime = 0;
 
     // Debug_print(statusCount++);
-    // Debug_println(": Loop");
+    // Debug_print(": Loop - heat pin=");
+    // Debug_print(digitalRead(FIRE_REQUEST_PIN));
+    // Debug_println();
   }
 
   delay(10);
