@@ -20,8 +20,6 @@
 #define Debug_delay(...)
 #endif
 
-#define TEMP_LIMIT 80
-
 #define MAX_HEAT_HOURS 12L
 #define MAX_HEAT_TIME (MAX_HEAT_HOURS * 60L * 60L * 1000L)
 
@@ -34,6 +32,7 @@
 #define MOTOR_PIN_2 12
 
 #ifdef FLAT_BOARD_LAYOUT
+#define TEMP_LIMIT 85
 #define MOTOR_SLEEP_PIN 13
 #define KNOB_LIMIT_SENSOR_PIN MISO
 #define FIRE_REQUEST_PIN A4
@@ -41,6 +40,7 @@
 #define SWITCH_GROUND_PIN_2 A3
 #define TEMP_SENSOR_POWER_PIN 7
 #else
+#define TEMP_LIMIT 80
 #define MOTOR_SLEEP_PIN 7
 #define KNOB_LIMIT_SENSOR_PIN 9
 #define FIRE_REQUEST_PIN 10
@@ -321,10 +321,12 @@ void loop() {
   if (statusTime > 1000) {
     statusTime = 0;
 
-    // Debug_print(statusCount++);
-    // Debug_print(": Loop - heat pin=");
-    // Debug_print(digitalRead(FIRE_REQUEST_PIN));
-    // Debug_println();
+    #ifdef SIMULATE_HEAT
+    Debug_print(statusCount++);
+    Debug_print(": Loop - heat pin=");
+    Debug_print(digitalRead(FIRE_REQUEST_PIN));
+    Debug_println();
+    #endif
   }
 
   delay(10);
