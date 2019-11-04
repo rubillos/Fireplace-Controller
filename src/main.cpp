@@ -59,8 +59,8 @@
 #define COLOR_BLACK 0x000000
 
 Adafruit_DotStar statusLED = Adafruit_DotStar(1, DOTSTAR_DATA_PIN, DOTSTAR_CLOCK_PIN, DOTSTAR_BGR);
-
 Adafruit_MCP9808 tempSensor = Adafruit_MCP9808();
+
 bool validSensor = false;
 bool overTemp = false;
 
@@ -75,46 +75,49 @@ typedef enum {
 } ValveState;
 
 ValveState currentValveState = valveClosed;
-elapsedMillis valveWaitTime;
-
 uint32_t statusCount = 0;
 
 uint64_t millis64() {
-    static uint32_t low32 = 0, high32 = 0;
-    uint32_t new_low32 = millis();
-    if (new_low32 < low32) high32++;
-    low32 = new_low32;
-    return (uint64_t) high32 << 32 | low32;
+  static uint32_t low32 = 0, high32 = 0;
+  uint32_t new_low32 = millis();
+
+  if (new_low32 < low32)
+    high32++;
+
+  low32 = new_low32;
+
+  return (uint64_t) high32 << 32 | low32;
 }
 
 class elapsedMillis64
 {
-private:
-  uint64_t ms;
-public:
-  elapsedMillis64(void) { ms = millis64(); }
-  elapsedMillis64(uint64_t val) { ms = millis64() - val; }
-  elapsedMillis64(const elapsedMillis64 &orig) { ms = orig.ms; }
-  operator uint64_t () const { return millis64() - ms; }
-  elapsedMillis64 & operator = (const elapsedMillis64 &rhs) { ms = rhs.ms; return *this; }
-  elapsedMillis64 & operator = (uint64_t val) { ms = millis64() - val; return *this; }
-  elapsedMillis64 & operator -= (uint64_t val)      { ms += val ; return *this; }
-  elapsedMillis64 & operator += (uint64_t val)      { ms -= val ; return *this; }
-  elapsedMillis64 operator - (int val) const           { elapsedMillis64 r(*this); r.ms += val; return r; }
-  elapsedMillis64 operator - (unsigned int val) const  { elapsedMillis64 r(*this); r.ms += val; return r; }
-  elapsedMillis64 operator - (long val) const          { elapsedMillis64 r(*this); r.ms += val; return r; }
-  elapsedMillis64 operator - (unsigned long val) const { elapsedMillis64 r(*this); r.ms += val; return r; }
-  elapsedMillis64 operator - (int64_t val) const          { elapsedMillis64 r(*this); r.ms += val; return r; }
-  elapsedMillis64 operator - (uint64_t val) const { elapsedMillis64 r(*this); r.ms += val; return r; }
-  elapsedMillis64 operator + (int val) const           { elapsedMillis64 r(*this); r.ms -= val; return r; }
-  elapsedMillis64 operator + (unsigned int val) const  { elapsedMillis64 r(*this); r.ms -= val; return r; }
-  elapsedMillis64 operator + (long val) const          { elapsedMillis64 r(*this); r.ms -= val; return r; }
-  elapsedMillis64 operator + (unsigned long val) const { elapsedMillis64 r(*this); r.ms -= val; return r; }
-  elapsedMillis64 operator + (int64_t val) const          { elapsedMillis64 r(*this); r.ms -= val; return r; }
-  elapsedMillis64 operator + (uint64_t val) const { elapsedMillis64 r(*this); r.ms -= val; return r; }
+  private:
+    uint64_t ms;
+  public:
+    elapsedMillis64(void) { ms = millis64(); }
+    elapsedMillis64(uint64_t val) { ms = millis64() - val; }
+    elapsedMillis64(const elapsedMillis64 &orig) { ms = orig.ms; }
+    operator uint64_t () const { return millis64() - ms; }
+    elapsedMillis64 & operator = (const elapsedMillis64 &rhs) { ms = rhs.ms; return *this; }
+    elapsedMillis64 & operator = (uint64_t val)       { ms = millis64() - val; return *this; }
+    elapsedMillis64 & operator -= (uint64_t val)      { ms += val ; return *this; }
+    elapsedMillis64 & operator += (uint64_t val)      { ms -= val ; return *this; }
+    elapsedMillis64 operator - (int val) const            { elapsedMillis64 r(*this); r.ms += val; return r; }
+    elapsedMillis64 operator - (unsigned int val) const   { elapsedMillis64 r(*this); r.ms += val; return r; }
+    elapsedMillis64 operator - (long val) const           { elapsedMillis64 r(*this); r.ms += val; return r; }
+    elapsedMillis64 operator - (unsigned long val) const  { elapsedMillis64 r(*this); r.ms += val; return r; }
+    elapsedMillis64 operator - (int64_t val) const        { elapsedMillis64 r(*this); r.ms += val; return r; }
+    elapsedMillis64 operator - (uint64_t val) const       { elapsedMillis64 r(*this); r.ms += val; return r; }
+    elapsedMillis64 operator + (int val) const            { elapsedMillis64 r(*this); r.ms -= val; return r; }
+    elapsedMillis64 operator + (unsigned int val) const   { elapsedMillis64 r(*this); r.ms -= val; return r; }
+    elapsedMillis64 operator + (long val) const           { elapsedMillis64 r(*this); r.ms -= val; return r; }
+    elapsedMillis64 operator + (unsigned long val) const  { elapsedMillis64 r(*this); r.ms -= val; return r; }
+    elapsedMillis64 operator + (int64_t val) const        { elapsedMillis64 r(*this); r.ms -= val; return r; }
+    elapsedMillis64 operator + (uint64_t val) const       { elapsedMillis64 r(*this); r.ms -= val; return r; }
 };
 
 elapsedMillis64 fireOnTime;
+elapsedMillis64 valveWaitTime;
 
 void setStatusColor(uint32_t color) {
   #ifdef FLAT_BOARD_LAYOUT
@@ -285,8 +288,6 @@ void setup() {
     Debug_println("Valve is Closed. Ready.");
 }
 
-elapsedMillis statusTime;
-
 void loop() {
   millis64();
 
@@ -318,16 +319,18 @@ void loop() {
 
   updateStatusLED();
 
+  #ifdef SIMULATE_HEAT
+  static elapsedMillis statusTime;
+
   if (statusTime > 1000) {
     statusTime = 0;
 
-    #ifdef SIMULATE_HEAT
     Debug_print(statusCount++);
     Debug_print(": Loop - heat pin=");
     Debug_print(digitalRead(FIRE_REQUEST_PIN));
     Debug_println();
-    #endif
   }
+  #endif
 
   delay(10);
 }
